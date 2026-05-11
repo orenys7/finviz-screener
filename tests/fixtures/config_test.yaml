@@ -1,0 +1,9 @@
+model: claude-sonnet-4-6
+score_threshold: 7
+lookback_runs: 4
+
+screeners:
+  - name: test-screener
+    url: "https://finviz.com/screener.ashx?v=111&f=cap_midover"
+  - name: another-screener
+    url: "https://finviz.com/screener.ashx?v=111&f=ta_highlow52w_nh"

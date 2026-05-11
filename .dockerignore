@@ -1,0 +1,36 @@
+.git
+.gitignore
+.github/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Project artifacts that shouldn't ship in the image
+charts/
+state.db
+*.db-journal
+.env
+*.env
+
+# Docs / planning
+plan.md
+README.md
+
+# Tests are not needed at runtime
+tests/
+
+# Legacy JS files (project is migrating to Python; safe to drop from image)
+analyzer.js
+index.js
+scraper.js
+test-models.js
+package.json
+package-lock.json
+node_modules/

@@ -1,0 +1,25 @@
+services:
+  scan:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - finviz-state:/data
+
+  test:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    # Bind-mount live source so tests run against the current code
+    # without needing a rebuild on every change.
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./config.yaml:/app/config.yaml
+    entrypoint: ["uv", "run", "pytest"]
+    command: ["-v"]
+
+volumes:
+  finviz-state:
