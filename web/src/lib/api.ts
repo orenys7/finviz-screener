@@ -30,7 +30,7 @@ const DEV = import.meta.env.DEV;
 const API_BASE = DEV ? "http://localhost:8000/api" : null;
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const url = API_BASE ? `${API_BASE}${path}` : `.${path}.json`.replace("/api", "/data");
+  const url = API_BASE ? `${API_BASE}${path}` : `./data${path}.json`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText} — ${url}`);
   return resp.json() as Promise<T>;
