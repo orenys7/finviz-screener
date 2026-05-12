@@ -222,9 +222,12 @@ def _analyze_gemini(
     if client is None:
         client = genai.Client()
 
+    # gemini-2.5-* are thinking models — reasoning consumes the same budget as
+    # output tokens, so the cap has to leave room for both. 4096 covers the
+    # ~5k-token rubric's thinking trace plus the ~150-token JSON reply.
     config = genai_types.GenerateContentConfig(
         system_instruction=_SYSTEM_PROMPT,
-        max_output_tokens=256,
+        max_output_tokens=4096,
         response_mime_type="application/json",
     )
     contents = [
@@ -241,7 +244,17 @@ def _analyze_gemini(
                 config=config,
             )
             _log_no_cache(ticker, cache_stats)
-            return _parse_response(response.text)
+            text = response.text
+            if text is None:
+                finish = None
+                try:
+                    finish = response.candidates[0].finish_reason
+                except (AttributeError, IndexError, TypeError):
+                    pass
+                raise RuntimeError(
+                    f"Gemini returned no text for {ticker} (finish_reason={finish})"
+                )
+            return _parse_response(text)
         except genai_errors.APIError as exc:
             code = getattr(exc, "code", None)
             if code not in (429, 503):
