@@ -138,9 +138,7 @@ def test_analyze_gemini_returns_analysis_response():
     good_json = json.dumps({"score": 8, "analysis": "Clean Gemini breakout call."})
     mock_client.models.generate_content.return_value = _make_genai_response(good_json)
 
-    result = analyze(
-        "NVDA", b"\x89PNG\r\nfake", "gemini-2.5-pro", client=mock_client
-    )
+    result = analyze("NVDA", b"\x89PNG\r\nfake", "gemini-2.5-pro", client=mock_client)
 
     assert result.score == 8
     assert isinstance(result, AnalysisResponse)
@@ -155,9 +153,7 @@ def test_analyze_gemini_retries_on_429():
         _make_genai_response(good_json),
     ]
 
-    result = analyze(
-        "TSLA", b"\x89PNG\r\nfake", "gemini-2.5-pro", client=mock_client
-    )
+    result = analyze("TSLA", b"\x89PNG\r\nfake", "gemini-2.5-pro", client=mock_client)
 
     assert result.score == 7
     assert mock_client.models.generate_content.call_count == 2
@@ -168,6 +164,4 @@ def test_analyze_gemini_raises_after_two_429_errors():
     mock_client.models.generate_content.side_effect = _genai_api_error(429)
 
     with pytest.raises(RuntimeError, match="overloaded"):
-        analyze(
-            "AMD", b"\x89PNG\r\nfake", "gemini-2.5-pro", client=mock_client
-        )
+        analyze("AMD", b"\x89PNG\r\nfake", "gemini-2.5-pro", client=mock_client)
