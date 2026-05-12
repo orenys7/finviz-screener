@@ -28,6 +28,27 @@ def test_migrate_is_idempotent(db):
     assert {"runs", "signals"}.issubset(tables)
 
 
+def test_migrate_adds_market_data_columns(db):
+    cols = {r["name"] for r in db.execute("PRAGMA table_info(signals)")}
+    assert {"price", "change_pct", "volume"}.issubset(cols)
+
+
+def test_migrate_preserves_existing_signal_rows(db):
+    # Simulate an old DB by dropping the new columns and re-adding them via migrate.
+    run_id = insert_run(db)
+    insert_signals(
+        db,
+        run_id,
+        [Signal(ticker="AAPL", screener="s1", score=9, analysis="Old.")],
+    )
+    migrate(db)  # second call must not destroy data
+    row = db.execute(
+        "SELECT ticker, score FROM signals WHERE run_id = ?", (run_id,)
+    ).fetchone()
+    assert row["ticker"] == "AAPL"
+    assert row["score"] == 9
+
+
 def test_insert_run_returns_incrementing_ids(db):
     id1 = insert_run(db)
     id2 = insert_run(db)

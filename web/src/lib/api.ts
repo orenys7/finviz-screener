@@ -4,6 +4,9 @@ export interface SignalRow {
   score: number;
   analysis: string;
   is_new_hit: boolean;
+  price: number | null;
+  change_pct: number | null;
+  volume: number | null;
 }
 
 export interface RunSummary {

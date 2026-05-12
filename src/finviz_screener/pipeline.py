@@ -9,7 +9,7 @@ from .db import insert_run, insert_signals, mark_run_finished
 from .diff import find_new_hits
 from .models import NewHit, Signal
 from .notify import post_discord
-from .scraper import browser_session, fetch_tickers
+from .scraper import browser_session, fetch_screener_rows
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ def run_once(
             for screener in screeners:
                 logger.info("screener %r — fetching tickers", screener.name)
                 try:
-                    tickers = fetch_tickers(screener.url, browser=browser)
+                    rows = fetch_screener_rows(screener.url, browser=browser)
                 except Exception as exc:
                     logger.error(
                         "screener %r failed to fetch tickers: %s", screener.name, exc
@@ -66,33 +66,44 @@ def run_once(
                     error_count += 1
                     continue
 
-                logger.info("screener %r — %d ticker(s)", screener.name, len(tickers))
+                logger.info("screener %r — %d ticker(s)", screener.name, len(rows))
                 screener_signals = []
 
-                for ticker in tickers:
+                for row in rows:
                     if time.monotonic() >= deadline:
                         raise _DeadlineExceeded()
                     ticker_count += 1
                     try:
-                        png = download_chart(ticker, client=http_client)
+                        png = download_chart(row.ticker, client=http_client)
                         result = analyze(
-                            ticker,
+                            row.ticker,
                             png,
                             config.model,
                             client=client,
                             cache_stats=cache_stats,
                         )
+                        if result.score < config.min_score_to_store:
+                            logger.info(
+                                "ticker %s — score=%d (skipped, below %d)",
+                                row.ticker,
+                                result.score,
+                                config.min_score_to_store,
+                            )
+                            continue
                         screener_signals.append(
                             Signal(
-                                ticker=ticker,
+                                ticker=row.ticker,
                                 screener=screener.name,
                                 score=result.score,
                                 analysis=result.analysis,
+                                price=row.price,
+                                change_pct=row.change_pct,
+                                volume=row.volume,
                             )
                         )
-                        logger.info("ticker %s — score=%d", ticker, result.score)
+                        logger.info("ticker %s — score=%d", row.ticker, result.score)
                     except Exception as exc:
-                        logger.error("ticker %s failed: %s", ticker, exc)
+                        logger.error("ticker %s failed: %s", row.ticker, exc)
                         error_count += 1
 
                 insert_signals(conn, run_id, screener_signals)

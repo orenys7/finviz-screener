@@ -49,7 +49,8 @@ The provider is auto-detected from the model name prefix.
 
 | Setting | Default | Effect |
 |---|---|---|
-| `score_threshold` | `8` | Minimum Claude score (1–10) to count as a hit. Lower = more alerts, higher = fewer but stronger signals. |
+| `score_threshold` | `8` | Minimum LLM score (1–10) to count as a hit. Lower = more alerts, higher = fewer but stronger signals. |
+| `min_score_to_store` | `7` | Minimum score to persist a signal in `state.db`. Lower-scored tickers are analyzed and logged but not stored — keeps the DB and dashboard focused on actionable signals. Must be `≤ score_threshold`. |
 | `lookback_runs` | `6` | Number of past runs to check before calling a ticker "new". At 3 runs/day this covers ~2 days. |
 
 ### Inspecting the database

@@ -32,6 +32,9 @@ def _build_run_detail(
             score=s.score,
             analysis=s.analysis,
             is_new_hit=(s.ticker, s.screener) in new_tickers,
+            price=s.price,
+            change_pct=s.change_pct,
+            volume=s.volume,
         )
         for s in signals
     ]

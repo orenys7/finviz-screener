@@ -128,3 +128,31 @@ def test_export_idempotent(db, tmp_path):
 
     runs = json.loads((tmp_path / "runs.json").read_text())
     assert len(runs) == 1
+
+
+def test_export_includes_market_data(db, tmp_path):
+    run_id = insert_run(db)
+    insert_signals(
+        db,
+        run_id,
+        [
+            Signal(
+                ticker="NVDA",
+                screener="test",
+                score=9,
+                analysis="ok",
+                price=123.45,
+                change_pct=2.5,
+                volume=12_345_678,
+            )
+        ],
+    )
+    mark_run_finished(db, run_id, "ok")
+
+    export(db, tmp_path)
+
+    detail = json.loads((tmp_path / "runs" / f"{run_id}.json").read_text())
+    nvda = next(s for s in detail["signals"] if s["ticker"] == "NVDA")
+    assert nvda["price"] == 123.45
+    assert nvda["change_pct"] == 2.5
+    assert nvda["volume"] == 12_345_678

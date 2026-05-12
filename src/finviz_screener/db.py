@@ -36,6 +36,16 @@ def migrate(conn: sqlite3.Connection) -> None:
             ON signals(ticker, score);
     """)
 
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(signals)")}
+    for col, ddl in (
+        ("price", "REAL"),
+        ("change_pct", "REAL"),
+        ("volume", "INTEGER"),
+    ):
+        if col not in existing:
+            conn.execute(f"ALTER TABLE signals ADD COLUMN {col} {ddl}")
+    conn.commit()
+
 
 def insert_run(conn: sqlite3.Connection) -> int:
     started_at = datetime.now(timezone.utc).isoformat()
@@ -60,9 +70,22 @@ def insert_signals(
     conn: sqlite3.Connection, run_id: int, signals: Sequence[Signal]
 ) -> None:
     conn.executemany(
-        "INSERT OR REPLACE INTO signals (run_id, ticker, screener, score, analysis) "
-        "VALUES (?, ?, ?, ?, ?)",
-        [(run_id, s.ticker, s.screener, s.score, s.analysis) for s in signals],
+        "INSERT OR REPLACE INTO signals "
+        "(run_id, ticker, screener, score, analysis, price, change_pct, volume) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            (
+                run_id,
+                s.ticker,
+                s.screener,
+                s.score,
+                s.analysis,
+                s.price,
+                s.change_pct,
+                s.volume,
+            )
+            for s in signals
+        ],
     )
     conn.commit()
 
@@ -130,8 +153,8 @@ def get_new_hit_counts(
 
 def get_signals_for_run(conn: sqlite3.Connection, run_id: int) -> list[Signal]:
     rows = conn.execute(
-        "SELECT ticker, screener, score, analysis FROM signals "
-        "WHERE run_id = ? ORDER BY score DESC, ticker",
+        "SELECT ticker, screener, score, analysis, price, change_pct, volume "
+        "FROM signals WHERE run_id = ? ORDER BY score DESC, ticker",
         (run_id,),
     ).fetchall()
     return [
@@ -140,6 +163,9 @@ def get_signals_for_run(conn: sqlite3.Connection, run_id: int) -> list[Signal]:
             screener=r["screener"],
             score=r["score"],
             analysis=r["analysis"],
+            price=r["price"],
+            change_pct=r["change_pct"],
+            volume=r["volume"],
         )
         for r in rows
     ]

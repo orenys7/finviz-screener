@@ -13,6 +13,7 @@ class ScreenerConfig(BaseModel):
 class AppConfig(BaseModel):
     model: str = "claude-sonnet-4-6"
     score_threshold: int = 8
+    min_score_to_store: int = 7
     lookback_runs: int = 6
     export_dir: str | None = None
     screeners: list[ScreenerConfig]

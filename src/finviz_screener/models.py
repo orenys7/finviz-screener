@@ -11,6 +11,16 @@ class Signal(BaseModel):
     screener: str
     score: int
     analysis: str
+    price: float | None = None
+    change_pct: float | None = None
+    volume: int | None = None
+
+
+class ScreenerRow(BaseModel):
+    ticker: str
+    price: float | None = None
+    change_pct: float | None = None
+    volume: int | None = None
 
 
 class RunRow(BaseModel):
@@ -36,6 +46,9 @@ class SignalRow(BaseModel):
     score: int
     analysis: str
     is_new_hit: bool = False
+    price: float | None = None
+    change_pct: float | None = None
+    volume: int | None = None
 
 
 class RunSummary(BaseModel):
