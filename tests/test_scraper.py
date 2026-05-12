@@ -80,14 +80,22 @@ def test_column_indices_resolves_by_header_text():
     assert idx["volume"] == 10
 
 
-def test_column_indices_falls_back_when_header_missing():
-    # No "Price" or "Change" header → those should be None
+def test_column_indices_falls_back_to_v111_layout_when_headers_missing():
+    # Empty headers → fall back to Finviz v=111 default column positions
+    # (col 0=No., 1=Ticker, 2=Last, 3=Change, 4=Volume).
+    idx = _column_indices([])
+    assert idx == {"ticker": 1, "price": 2, "change_pct": 3, "volume": 4}
+
+
+def test_column_indices_partial_headers_uses_resolved_then_default():
+    # If "Volume" is present and "Price" isn't, volume resolves but price
+    # falls back to the v=111 default index.
     headers = ["No.", "Ticker", "Volume"]
     idx = _column_indices(headers)
     assert idx["ticker"] == 1
-    assert idx["price"] is None
-    assert idx["change_pct"] is None
     assert idx["volume"] == 2
+    assert idx["price"] == 2  # fallback default
+    assert idx["change_pct"] == 3  # fallback default
 
 
 def test_build_rows_parses_cells_in_resolved_order():

@@ -19,20 +19,40 @@ _ROW_SELECTOR = "tr.styled-row"
 _TICKER_SELECTOR = "tr.styled-row a.tab-link"
 _MAX_RETRIES = 3
 
-# Read column header text once per page, then map each scraped row's cells by
-# the header index so we don't bake Finviz's view-specific column order into
-# the code. The selector matches Finviz's screener-table header row.
+# Resolve column positions by finding the header row in the same <table> as the
+# data rows, rather than guessing at Finviz's class names (which change between
+# views and across redesigns).
 _TABLE_JS = """
 () => {
-  const headerCells = Array.from(
-    document.querySelectorAll(
-      'tr.table-header > th, tr.table-top > th, tr.styled-header > th'
-    )
-  ).map(th => th.innerText.trim());
-  const rows = Array.from(document.querySelectorAll('tr.styled-row')).map(
+  const dataRows = Array.from(document.querySelectorAll('tr.styled-row'));
+  let headers = [];
+  if (dataRows.length > 0) {
+    const table = dataRows[0].closest('table');
+    if (table) {
+      // Header row = first <tr> in the same table that has <th> children, or
+      // any <tr> whose cells differ from <td>-only rows. Try <thead> first.
+      const theadRow = table.querySelector('thead tr');
+      let headerRow = theadRow;
+      if (!headerRow) {
+        // Walk previous siblings of the first data row up to the table top.
+        for (const tr of Array.from(table.querySelectorAll('tr'))) {
+          if (tr === dataRows[0]) break;
+          if (tr.querySelector('th') || tr.classList.contains('table-top')) {
+            headerRow = tr;
+          }
+        }
+      }
+      if (headerRow) {
+        headers = Array.from(
+          headerRow.querySelectorAll('th, td')
+        ).map(c => c.innerText.trim());
+      }
+    }
+  }
+  const rows = dataRows.map(
     tr => Array.from(tr.querySelectorAll('td')).map(td => td.innerText.trim())
   );
-  return {headers: headerCells, rows};
+  return {headers, rows};
 }
 """
 
@@ -82,6 +102,7 @@ def _scrape(url: str, browser: Browser) -> list[ScreenerRow]:
         raw_rows: list[list[str]] = data.get("rows", []) or []
 
         col_idx = _column_indices(headers)
+        logger.info("scraper headers=%r col_idx=%r", headers, col_idx)
         rows = _build_rows(raw_rows, col_idx)
 
         seen: set[str] = set()
@@ -121,12 +142,18 @@ def _column_indices(headers: list[str]) -> dict[str, int]:
                 return lower.index(cand)
         return None
 
+    # When headers can't be read, fall back to Finviz's v=111 layout
+    # (col 0=No., 1=Ticker, 2=Last, 3=Change, 4=Volume). The configured
+    # screeners all use v=111 today.
     ticker_idx = find("ticker")
+    price_idx = find("price", "last")
+    change_idx = find("change")
+    volume_idx = find("volume")
     return {
         "ticker": ticker_idx if ticker_idx is not None else 1,
-        "price": find("price", "last"),
-        "change_pct": find("change"),
-        "volume": find("volume"),
+        "price": price_idx if price_idx is not None else 2,
+        "change_pct": change_idx if change_idx is not None else 3,
+        "volume": volume_idx if volume_idx is not None else 4,
     }
 
 
