@@ -21,8 +21,15 @@ class AppConfig(BaseModel):
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    anthropic_api_key: str
+    anthropic_api_key: str = ""
+    gemini_api_key: str = ""
     discord_webhook_url: str = ""
+
+    def require_key_for(self, model: str) -> None:
+        if model.startswith("claude-") and not self.anthropic_api_key:
+            raise ValueError(f"ANTHROPIC_API_KEY is required for model {model!r}")
+        if model.startswith("gemini-") and not self.gemini_api_key:
+            raise ValueError(f"GEMINI_API_KEY is required for model {model!r}")
 
 
 def load_config(path: str | Path = "config.yaml") -> AppConfig:

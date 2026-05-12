@@ -1,6 +1,6 @@
 # finviz-screener
 
-Scheduled momentum stock screener. Scrapes Finviz, scores charts with Claude, and posts new high-score tickers to Discord.
+Scheduled momentum stock screener. Scrapes Finviz, scores charts with Claude or Gemini, and posts new high-score tickers to Discord.
 
 ## Requirements
 
@@ -12,7 +12,7 @@ Scheduled momentum stock screener. Scrapes Finviz, scores charts with Claude, an
 ```bash
 uv sync
 uv run playwright install chromium
-cp .env.example .env   # fill in ANTHROPIC_API_KEY and DISCORD_WEBHOOK_URL
+cp .env.example .env   # fill in ANTHROPIC_API_KEY (or GEMINI_API_KEY) and DISCORD_WEBHOOK_URL
 ```
 
 ## Run
@@ -36,6 +36,14 @@ screeners:
 ```
 
 Build the URL using Finviz's screener UI, then copy it from the browser's address bar.
+
+### Switching LLM provider
+
+Set `model:` in `config.yaml` to either:
+- `claude-sonnet-4-6` / `claude-opus-4-7` (uses `ANTHROPIC_API_KEY`, with prompt-prefix caching of the scoring rubric)
+- `gemini-2.5-pro` / `gemini-2.5-flash` (uses `GEMINI_API_KEY`, no rubric caching)
+
+The provider is auto-detected from the model name prefix.
 
 ### Tuning thresholds
 
@@ -69,8 +77,11 @@ Set these as environment variables locally (`.env`) or as GitHub Actions reposit
 
 | Variable | Required | Description |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key (Claude) |
+| `ANTHROPIC_API_KEY` | If `model: claude-*` | Anthropic API key (Claude) |
+| `GEMINI_API_KEY` | If `model: gemini-*` | Google API key (Gemini) |
 | `DISCORD_WEBHOOK_URL` | No | Discord incoming webhook URL — omit to skip notifications |
+
+Exactly one provider key is required, matching the `model:` prefix in `config.yaml`.
 
 To add secrets in GitHub: **Settings → Secrets and variables → Actions → New repository secret**.
 

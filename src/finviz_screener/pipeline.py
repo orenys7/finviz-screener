@@ -2,16 +2,14 @@ import logging
 import sqlite3
 import time
 
-import anthropic as anthropic_sdk
-
 from .analyzer import analyze
-from .charts import download_chart
+from .charts import download_chart, make_chart_client
 from .config import AppConfig
 from .db import insert_run, insert_signals, mark_run_finished
 from .diff import find_new_hits
 from .models import NewHit, Signal
 from .notify import post_discord
-from .scraper import fetch_tickers
+from .scraper import browser_session, fetch_tickers
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +27,9 @@ def run_once(
     screener_filter: str | None = None,
     dry_run: bool = False,
     webhook_url: str = "",
-    client: anthropic_sdk.Anthropic | None = None,
+    client: object | None = None,
     timeout_seconds: int = _DEFAULT_TIMEOUT,
 ) -> list[NewHit]:
-    if client is None:
-        client = anthropic_sdk.Anthropic()
-
     screeners = config.screeners
     if screener_filter:
         screeners = [s for s in screeners if s.name == screener_filter]
@@ -58,61 +53,62 @@ def run_once(
     timed_out = False
     screener_signals: list[Signal] = []  # kept in outer scope for timeout flush
 
-    try:
-        for screener in screeners:
-            logger.info("screener %r — fetching tickers", screener.name)
-            try:
-                tickers = fetch_tickers(screener.url)
-            except Exception as exc:
-                logger.error(
-                    "screener %r failed to fetch tickers: %s", screener.name, exc
-                )
-                error_count += 1
-                continue
-
-            logger.info("screener %r — %d ticker(s)", screener.name, len(tickers))
-            screener_signals = []
-
-            for ticker in tickers:
-                if time.monotonic() >= deadline:
-                    raise _DeadlineExceeded()
-                ticker_count += 1
+    with make_chart_client() as http_client, browser_session() as browser:
+        try:
+            for screener in screeners:
+                logger.info("screener %r — fetching tickers", screener.name)
                 try:
-                    png = download_chart(ticker)
-                    result = analyze(
-                        ticker,
-                        png,
-                        config.model,
-                        client=client,
-                        cache_stats=cache_stats,
-                    )
-                    screener_signals.append(
-                        Signal(
-                            ticker=ticker,
-                            screener=screener.name,
-                            score=result.score,
-                            analysis=result.analysis,
-                        )
-                    )
-                    logger.info("ticker %s — score=%d", ticker, result.score)
+                    tickers = fetch_tickers(screener.url, browser=browser)
                 except Exception as exc:
-                    logger.error("ticker %s failed: %s", ticker, exc)
+                    logger.error(
+                        "screener %r failed to fetch tickers: %s", screener.name, exc
+                    )
                     error_count += 1
+                    continue
 
-            insert_signals(conn, run_id, screener_signals)
-            all_signals.extend(screener_signals)
-            screener_signals = []
+                logger.info("screener %r — %d ticker(s)", screener.name, len(tickers))
+                screener_signals = []
 
-    except _DeadlineExceeded:
-        # Flush signals collected for the in-progress screener before bailing out.
-        if screener_signals:
-            insert_signals(conn, run_id, screener_signals)
-            all_signals.extend(screener_signals)
-        timed_out = True
-        logger.warning(
-            "wall-clock cap of %ds reached — stopping early", timeout_seconds
-        )
-        error_count += 1
+                for ticker in tickers:
+                    if time.monotonic() >= deadline:
+                        raise _DeadlineExceeded()
+                    ticker_count += 1
+                    try:
+                        png = download_chart(ticker, client=http_client)
+                        result = analyze(
+                            ticker,
+                            png,
+                            config.model,
+                            client=client,
+                            cache_stats=cache_stats,
+                        )
+                        screener_signals.append(
+                            Signal(
+                                ticker=ticker,
+                                screener=screener.name,
+                                score=result.score,
+                                analysis=result.analysis,
+                            )
+                        )
+                        logger.info("ticker %s — score=%d", ticker, result.score)
+                    except Exception as exc:
+                        logger.error("ticker %s failed: %s", ticker, exc)
+                        error_count += 1
+
+                insert_signals(conn, run_id, screener_signals)
+                all_signals.extend(screener_signals)
+                screener_signals = []
+
+        except _DeadlineExceeded:
+            # Flush signals collected for the in-progress screener before bailing out.
+            if screener_signals:
+                insert_signals(conn, run_id, screener_signals)
+                all_signals.extend(screener_signals)
+            timed_out = True
+            logger.warning(
+                "wall-clock cap of %ds reached — stopping early", timeout_seconds
+            )
+            error_count += 1
 
     elapsed = time.monotonic() - t0
 

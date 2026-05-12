@@ -1,9 +1,7 @@
-from unittest.mock import MagicMock, call, patch
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from finviz_screener.models import NewHit
-from finviz_screener.notify import post_discord, _color, _embed
+from finviz_screener.notify import _color, _embed, post_discord
 
 WEBHOOK = "https://discord.com/api/webhooks/123/abc"
 

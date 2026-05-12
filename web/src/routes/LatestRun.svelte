@@ -1,14 +1,20 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { fetchLatest, type RunDetail, type SignalRow } from "../lib/api";
+  import { fetchLatest, fetchManifest, type RunDetail, type SignalRow } from "../lib/api";
 
   let detail: RunDetail | null = null;
   let error: string | null = null;
+  let empty = false;
   let sortKey: keyof SignalRow = "score";
   let sortAsc = false;
 
   onMount(async () => {
     try {
+      const manifest = await fetchManifest();
+      if (manifest.latest_run_id === null) {
+        empty = true;
+        return;
+      }
       detail = await fetchLatest();
     } catch (e) {
       error = String(e);
@@ -41,6 +47,8 @@
 
 {#if error}
   <p class="error">{error}</p>
+{:else if empty}
+  <p class="empty">No scans have run yet.</p>
 {:else if !detail}
   <p class="loading">Loading…</p>
 {:else}

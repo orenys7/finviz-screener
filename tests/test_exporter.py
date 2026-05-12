@@ -1,10 +1,15 @@
 import json
 import sqlite3
-from pathlib import Path
 
 import pytest
 
-from finviz_screener.db import connect, insert_run, insert_signals, mark_run_finished, migrate
+from finviz_screener.db import (
+    connect,
+    insert_run,
+    insert_signals,
+    mark_run_finished,
+    migrate,
+)
 from finviz_screener.exporter import export
 from finviz_screener.models import Signal
 

@@ -2,8 +2,12 @@ import base64
 import json
 import logging
 import time
+from typing import Any, Literal
 
 import anthropic
+from google import genai
+from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 
 from .models import AnalysisResponse
 
@@ -120,12 +124,35 @@ Return a JSON object with exactly these two keys:
 Return ONLY the JSON object. No markdown fences, no preamble, no explanation outside the JSON."""
 
 
+def _provider_for(model: str) -> Literal["anthropic", "google"]:
+    if model.startswith("claude-"):
+        return "anthropic"
+    if model.startswith("gemini-"):
+        return "google"
+    raise ValueError(
+        f"unknown model prefix: {model!r} — expected 'claude-*' or 'gemini-*'"
+    )
+
+
 def analyze(
     ticker: str,
     png_bytes: bytes,
     model: str,
-    client: anthropic.Anthropic | None = None,
+    client: Any | None = None,
     cache_stats: dict[str, int] | None = None,
+) -> AnalysisResponse:
+    provider = _provider_for(model)
+    if provider == "anthropic":
+        return _analyze_anthropic(ticker, png_bytes, model, client, cache_stats)
+    return _analyze_gemini(ticker, png_bytes, model, client, cache_stats)
+
+
+def _analyze_anthropic(
+    ticker: str,
+    png_bytes: bytes,
+    model: str,
+    client: Any | None,
+    cache_stats: dict[str, int] | None,
 ) -> AnalysisResponse:
     if client is None:
         client = anthropic.Anthropic()
@@ -167,7 +194,7 @@ def analyze(
                 ],
             )
             _log_cache_usage(ticker, response.usage, cache_stats)
-            return _parse_response(response)
+            return _parse_response(response.content[0].text)
         except anthropic.InternalServerError as exc:
             if exc.status_code != 529:
                 raise
@@ -185,8 +212,56 @@ def analyze(
     raise RuntimeError(f"analysis failed for {ticker}") from last_exc
 
 
-def _parse_response(response: anthropic.types.Message) -> AnalysisResponse:
-    text = response.content[0].text.strip()
+def _analyze_gemini(
+    ticker: str,
+    png_bytes: bytes,
+    model: str,
+    client: Any | None,
+    cache_stats: dict[str, int] | None,
+) -> AnalysisResponse:
+    if client is None:
+        client = genai.Client()
+
+    config = genai_types.GenerateContentConfig(
+        system_instruction=_SYSTEM_PROMPT,
+        max_output_tokens=256,
+        response_mime_type="application/json",
+    )
+    contents = [
+        genai_types.Part.from_bytes(data=png_bytes, mime_type="image/png"),
+        f"Analyze this chart for ticker: {ticker}",
+    ]
+
+    last_exc: Exception | None = None
+    for attempt in range(1, 3):
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
+            _log_no_cache(ticker, cache_stats)
+            return _parse_response(response.text)
+        except genai_errors.APIError as exc:
+            code = getattr(exc, "code", None)
+            if code not in (429, 503):
+                raise
+            last_exc = exc
+            if attempt == 1:
+                logger.warning(
+                    "gemini overloaded (%s) on %s, retrying once", code, ticker
+                )
+                time.sleep(2)
+            else:
+                raise RuntimeError(
+                    f"Gemini overloaded after retry for {ticker}"
+                ) from exc
+
+    raise RuntimeError(f"analysis failed for {ticker}") from last_exc
+
+
+def _parse_response(text: str) -> AnalysisResponse:
+    text = text.strip()
     # Strip markdown fences if the model ignored instructions
     if text.startswith("```"):
         text = text.split("```")[1]
@@ -216,3 +291,9 @@ def _log_cache_usage(
         logger.info("%s — no cache (input: %d tokens)", ticker, usage.input_tokens)
         if cache_stats is not None:
             cache_stats["uncached"] = cache_stats.get("uncached", 0) + 1
+
+
+def _log_no_cache(ticker: str, cache_stats: dict[str, int] | None) -> None:
+    logger.info("%s — cache N/A (gemini)", ticker)
+    if cache_stats is not None:
+        cache_stats["uncached"] = cache_stats.get("uncached", 0) + 1

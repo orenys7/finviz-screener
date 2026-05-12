@@ -63,6 +63,7 @@ def export(
 
     run_summaries: list[RunSummary] = []
     latest_id: int | None = run_ids[0] if run_ids else None
+    latest_detail: RunDetailResponse | None = None
 
     for run_id in run_ids:
         detail = _build_run_detail(conn, run_id, score_threshold, lookback_runs)
@@ -72,18 +73,18 @@ def export(
         (runs_dir / f"{run_id}.json").write_text(
             detail.model_dump_json(indent=2), encoding="utf-8"
         )
+        if run_id == latest_id:
+            latest_detail = detail
 
     (out / "runs.json").write_text(
         json.dumps([s.model_dump() for s in run_summaries], indent=2),
         encoding="utf-8",
     )
 
-    if latest_id is not None:
-        latest = _build_run_detail(conn, latest_id, score_threshold, lookback_runs)
-        if latest is not None:
-            (out / "latest.json").write_text(
-                latest.model_dump_json(indent=2), encoding="utf-8"
-            )
+    if latest_detail is not None:
+        (out / "latest.json").write_text(
+            latest_detail.model_dump_json(indent=2), encoding="utf-8"
+        )
 
     manifest = Manifest(
         generated_at=datetime.now(timezone.utc).isoformat(),

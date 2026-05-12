@@ -17,40 +17,63 @@ _HEADERS = {
 _MAX_RETRIES = 3
 
 
-def download_chart(ticker: str, timeout: float = 15.0) -> bytes:
+def make_chart_client(timeout: float = 15.0) -> httpx.Client:
+    return httpx.Client(headers=_HEADERS, timeout=timeout, follow_redirects=True)
+
+
+def download_chart(
+    ticker: str,
+    timeout: float = 15.0,
+    client: httpx.Client | None = None,
+) -> bytes:
     url = CHART_URL.format(ticker=ticker.upper())
     last_exc: Exception | None = None
-    for attempt in range(1, _MAX_RETRIES + 1):
-        try:
-            return _fetch(url, ticker, timeout)
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code not in (429, 500, 502, 503, 504):
-                raise
-            last_exc = exc
-            if attempt < _MAX_RETRIES:
-                wait = 2 ** attempt
-                logger.warning(
-                    "chart download attempt %d for %s HTTP %d — retrying in %ds",
-                    attempt, ticker, exc.response.status_code, wait,
-                )
-                time.sleep(wait)
-        except httpx.TransportError as exc:
-            last_exc = exc
-            if attempt < _MAX_RETRIES:
-                wait = 2 ** attempt
-                logger.warning(
-                    "chart download attempt %d for %s failed (%s) — retrying in %ds",
-                    attempt, ticker, exc, wait,
-                )
-                time.sleep(wait)
-    raise RuntimeError(f"chart download for {ticker} failed after {_MAX_RETRIES} attempts") from last_exc
+    _owns_client = client is None
+    if _owns_client:
+        client = make_chart_client(timeout)
+    try:
+        for attempt in range(1, _MAX_RETRIES + 1):
+            try:
+                return _fetch(url, ticker, client)
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code not in (429, 500, 502, 503, 504):
+                    raise
+                last_exc = exc
+                if attempt < _MAX_RETRIES:
+                    wait = 2**attempt
+                    logger.warning(
+                        "chart download attempt %d for %s HTTP %d — retrying in %ds",
+                        attempt,
+                        ticker,
+                        exc.response.status_code,
+                        wait,
+                    )
+                    time.sleep(wait)
+            except httpx.TransportError as exc:
+                last_exc = exc
+                if attempt < _MAX_RETRIES:
+                    wait = 2**attempt
+                    logger.warning(
+                        "chart download attempt %d for %s failed (%s)"
+                        " — retrying in %ds",
+                        attempt,
+                        ticker,
+                        exc,
+                        wait,
+                    )
+                    time.sleep(wait)
+    finally:
+        if _owns_client:
+            client.close()
+    raise RuntimeError(
+        f"chart download for {ticker} failed after {_MAX_RETRIES} attempts"
+    ) from last_exc
 
 
-def _fetch(url: str, ticker: str, timeout: float) -> bytes:
+def _fetch(url: str, ticker: str, client: httpx.Client) -> bytes:
     logger.debug("downloading chart for %s", ticker)
-    with httpx.Client(headers=_HEADERS, timeout=timeout, follow_redirects=True) as client:
-        response = client.get(url)
-        response.raise_for_status()
+    response = client.get(url)
+    response.raise_for_status()
     png = response.content
     if not png:
         raise ValueError(f"empty chart response for {ticker}")

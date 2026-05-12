@@ -2,7 +2,7 @@ name: Deploy Dashboard
 
 on:
   workflow_run:
-    workflows: ["Scan"]
+    workflows: ["Finviz Momentum Scan"]
     types: [completed]
   push:
     branches: [master]

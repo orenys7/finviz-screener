@@ -1,12 +1,25 @@
 import sqlite3
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from finviz_screener.config import AppConfig, ScreenerConfig
 from finviz_screener.db import connect, migrate
-from finviz_screener.models import AnalysisResponse, NewHit
 from finviz_screener.pipeline import run_once
+
+
+@pytest.fixture(autouse=True)
+def _mock_io_resources():
+    @contextmanager
+    def fake_browser_session():
+        yield MagicMock()
+
+    with (
+        patch("finviz_screener.pipeline.browser_session", fake_browser_session),
+        patch("finviz_screener.pipeline.make_chart_client", return_value=MagicMock()),
+    ):
+        yield
 
 
 @pytest.fixture
@@ -183,16 +196,24 @@ def test_run_once_calls_discord_when_not_dry_run(
 @patch("finviz_screener.pipeline.download_chart")
 @patch("finviz_screener.pipeline.time")
 def test_run_once_timeout_stops_early(mock_time, mock_chart, mock_tickers, db):
-    # Calls: deadline-calc(0.0), t0(0.0), T0-check(0.0 under 100), T1-check(999.0 over), elapsed(999.0)
+    # monotonic calls: deadline(0.0), t0(0.0), T0-check(<100), T1-check(>100), elapsed
     mock_time.monotonic.side_effect = [0.0, 0.0, 0.0, 999.0, 999.0]
 
     mock_tickers.return_value = ["T0", "T1", "T2"]
     mock_chart.return_value = b"\x89PNG\r\nfake"
 
-    run_once(_make_config(), db, client=_mock_client(score=9), dry_run=True, timeout_seconds=100)
+    run_once(
+        _make_config(),
+        db,
+        client=_mock_client(score=9),
+        dry_run=True,
+        timeout_seconds=100,
+    )
 
     row = db.execute("SELECT status FROM runs WHERE id = 1").fetchone()
-    processed = db.execute("SELECT COUNT(*) FROM signals WHERE run_id = 1").fetchone()[0]
+    processed = db.execute("SELECT COUNT(*) FROM signals WHERE run_id = 1").fetchone()[
+        0
+    ]
     # T0 processed and flushed; T1 triggers deadline → partial run
     assert processed == 1
     assert row["status"] == "partial"

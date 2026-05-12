@@ -56,7 +56,7 @@ def scan(
         _DEFAULT_TIMEOUT, "--timeout", help="Wall-clock cap in seconds (default 900)"
     ),
 ) -> None:
-    """Scrape Finviz, score charts with Claude, notify Discord on new high-score tickers."""
+    """Scrape Finviz, score charts via the configured LLM, notify Discord on hits."""
     _setup_logging()
 
     try:
@@ -66,7 +66,8 @@ def scan(
         raise typer.Exit(1)
 
     try:
-        settings = Settings()  # type: ignore[call-arg]
+        settings = Settings()
+        settings.require_key_for(config.model)
     except Exception as exc:
         typer.echo(f"Configuration error: {exc}", err=True)
         raise typer.Exit(1)

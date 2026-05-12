@@ -89,6 +89,45 @@ def get_run_by_id(conn: sqlite3.Connection, run_id: int) -> RunRow | None:
     )
 
 
+def get_signal_counts(conn: sqlite3.Connection, run_ids: list[int]) -> dict[int, int]:
+    if not run_ids:
+        return {}
+    placeholders = ",".join("?" * len(run_ids))
+    rows = conn.execute(
+        f"SELECT run_id, COUNT(*) AS n FROM signals"
+        f" WHERE run_id IN ({placeholders}) GROUP BY run_id",
+        run_ids,
+    ).fetchall()
+    return {r["run_id"]: r["n"] for r in rows}
+
+
+def get_new_hit_counts(
+    conn: sqlite3.Connection, threshold: int, lookback: int
+) -> dict[int, int]:
+    rows = conn.execute(
+        """
+        SELECT s.run_id, COUNT(*) AS n
+        FROM signals s
+        WHERE s.score >= :threshold
+          AND NOT EXISTS (
+              SELECT 1 FROM signals h
+              WHERE h.ticker   = s.ticker
+                AND h.screener = s.screener
+                AND h.score   >= :threshold
+                AND h.run_id IN (
+                    SELECT id FROM runs r2
+                    WHERE r2.id < s.run_id
+                    ORDER BY r2.id DESC
+                    LIMIT :lookback
+                )
+          )
+        GROUP BY s.run_id
+        """,
+        {"threshold": threshold, "lookback": lookback},
+    ).fetchall()
+    return {r["run_id"]: r["n"] for r in rows}
+
+
 def get_signals_for_run(conn: sqlite3.Connection, run_id: int) -> list[Signal]:
     rows = conn.execute(
         "SELECT ticker, screener, score, analysis FROM signals "

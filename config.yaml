@@ -1,3 +1,4 @@
+# model: claude-* uses Anthropic; gemini-* uses Google. Default: claude-sonnet-4-6.
 model: claude-sonnet-4-6
 score_threshold: 8
 lookback_runs: 6
