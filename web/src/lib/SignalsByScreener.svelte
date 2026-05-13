@@ -28,16 +28,6 @@
     return sortAsc ? " ↑" : " ↓";
   }
 
-  function cmp(a: SignalRow, b: SignalRow): number {
-    const av = a[sortKey];
-    const bv = b[sortKey];
-    if (av === null && bv === null) return 0;
-    if (av === null) return 1;
-    if (bv === null) return -1;
-    const c = av < bv ? -1 : av > bv ? 1 : 0;
-    return sortAsc ? c : -c;
-  }
-
   function scoreColor(score: number): string {
     if (score >= 8) return "#10b981"; // mint
     if (score >= 6) return "#f59e0b"; // amber
@@ -56,19 +46,36 @@
     return iso;
   }
 
-  // Preserve insertion order of screeners as they appear in `signals`.
-  $: groups = (() => {
+  function groupAndSort(
+    rows: SignalRow[],
+    key: SortKey,
+    asc: boolean,
+  ): { name: string; items: SignalRow[] }[] {
     const m = new Map<string, SignalRow[]>();
-    for (const s of signals) {
+    for (const s of rows) {
       const arr = m.get(s.screener) ?? [];
       arr.push(s);
       m.set(s.screener, arr);
     }
+    const cmp = (a: SignalRow, b: SignalRow): number => {
+      const av = a[key];
+      const bv = b[key];
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      const c = av < bv ? -1 : av > bv ? 1 : 0;
+      return asc ? c : -c;
+    };
     return Array.from(m.entries()).map(([name, items]) => ({
       name,
       items: [...items].sort(cmp),
     }));
-  })();
+  }
+
+  // Reference sortKey / sortAsc directly here so Svelte tracks them as
+  // dependencies — passing them as args to the helper guarantees the closure
+  // sees the current values every time they change.
+  $: groups = groupAndSort(signals, sortKey, sortAsc);
 </script>
 
 {#each groups as g}
@@ -87,8 +94,8 @@
             <th on:click={() => sort("change_pct")} class="num">% Change{arrow("change_pct")}</th>
             <th on:click={() => sort("volume")} class="num">Volume{arrow("volume")}</th>
             <th on:click={() => sort("streak")} class="num">Streak{arrow("streak")}</th>
-            <th>Status</th>
-            <th>Analysis</th>
+            <th class="static">Status</th>
+            <th class="static">Analysis</th>
           </tr>
         </thead>
         <tbody>
@@ -204,6 +211,13 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.02em;
+  }
+
+  :global(thead th.static) {
+    cursor: default;
+  }
+  :global(thead th.static:hover) {
+    color: var(--text-muted);
   }
 
   .ticker-text {
