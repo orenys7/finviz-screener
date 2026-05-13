@@ -5,8 +5,11 @@ min_score_to_store: 7    # DB storage cutoff (scores below this are dropped befo
 lookback_runs: 6
 
 screeners:
-  - name: high-short-midcap
-    url: "https://finviz.com/screener.ashx?v=111&f=cap_midover%2Csh_curvol_o2000%2Csh_float_u100%2Csh_outstanding_u100%2Csh_relvol_o1%2Csh_short_o20"
+  # - name: high-short-midcap
+  #   url: "https://finviz.com/screener.ashx?v=111&f=cap_midover%2Csh_curvol_o2000%2Csh_float_u100%2Csh_outstanding_u100%2Csh_relvol_o1%2Csh_short_o20"
+
+  - name: high-short-float-low-price
+    url: "https://finviz.com/screener.ashx?v=111&f=sh_avgvol_o200,sh_float_u100,sh_price_o10,sh_relvol_o1.5,sh_short_high"
 
   - name: breakouts-52w-high
     url: "https://finviz.com/screener.ashx?v=111&f=ta_highlow52w_nh%2Csh_curvol_o1000%2Csh_relvol_o1.5"
