@@ -4,7 +4,13 @@
 
   export let signals: SignalRow[] = [];
 
-  type SortKey = "ticker" | "score" | "price" | "change_pct" | "volume";
+  type SortKey =
+    | "ticker"
+    | "score"
+    | "price"
+    | "change_pct"
+    | "volume"
+    | "streak";
   let sortKey: SortKey = "score";
   let sortAsc = false;
 
@@ -44,6 +50,12 @@
     return h;
   }
 
+  function formatSince(iso: string | null): string {
+    if (!iso) return "";
+    // iso is "YYYY-MM-DD" — render compactly
+    return iso;
+  }
+
   // Preserve insertion order of screeners as they appear in `signals`.
   $: groups = (() => {
     const m = new Map<string, SignalRow[]>();
@@ -74,6 +86,7 @@
             <th on:click={() => sort("price")} class="num">Price{arrow("price")}</th>
             <th on:click={() => sort("change_pct")} class="num">% Change{arrow("change_pct")}</th>
             <th on:click={() => sort("volume")} class="num">Volume{arrow("volume")}</th>
+            <th on:click={() => sort("streak")} class="num">Streak{arrow("streak")}</th>
             <th>Status</th>
             <th>Analysis</th>
           </tr>
@@ -86,7 +99,12 @@
                   <span class="ticker-badge" style="background: hsl({tickerHue(s.ticker)}, 70%, 92%); color: hsl({tickerHue(s.ticker)}, 55%, 30%);">
                     {s.ticker.slice(0, 2)}
                   </span>
-                  <span class="ticker-sym">{s.ticker}</span>
+                  <span class="ticker-text">
+                    <span class="ticker-sym">{s.ticker}</span>
+                    {#if s.first_seen}
+                      <span class="ticker-since">since {formatSince(s.first_seen)}</span>
+                    {/if}
+                  </span>
                 </a>
               </td>
               <td class="num">
@@ -104,6 +122,15 @@
                 {/if}
               </td>
               <td class="num volume">{formatVolume(s.volume)}</td>
+              <td class="num">
+                {#if s.streak === null}
+                  <span class="muted">—</span>
+                {:else}
+                  <span class={`pill ${s.streak >= 3 ? "pill-up" : "pill-neutral"}`}
+                    >{s.streak}d{s.streak >= 5 ? " 🔥" : ""}</span
+                  >
+                {/if}
+              </td>
               <td>
                 {#if s.is_new_hit}
                   <span class="pill pill-new">NEW</span>
@@ -179,10 +206,22 @@
     letter-spacing: 0.02em;
   }
 
+  .ticker-text {
+    display: inline-flex;
+    flex-direction: column;
+    line-height: 1.25;
+  }
+
   .ticker-sym {
     font-weight: 600;
     font-size: 13px;
     transition: color 0.15s;
+  }
+
+  .ticker-since {
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 400;
   }
 
   .score-cell {

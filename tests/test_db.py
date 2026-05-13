@@ -4,6 +4,7 @@ import pytest
 
 from finviz_screener.db import (
     connect,
+    get_ticker_history,
     insert_run,
     insert_signals,
     mark_run_finished,
@@ -105,3 +106,78 @@ def test_insert_signals_replace_on_duplicate(db):
     ).fetchall()
     assert len(rows) == 1
     assert rows[0]["score"] == 9
+
+
+def _seed_run_on_date(
+    conn: sqlite3.Connection,
+    iso_date: str,
+    tickers: list[tuple[str, str]],
+) -> int:
+    """Create a finished run on `iso_date` UTC with the given signals."""
+    cur = conn.execute(
+        "INSERT INTO runs (started_at, finished_at, status) VALUES (?, ?, ?)",
+        (f"{iso_date}T13:00:00+00:00", f"{iso_date}T13:01:00+00:00", "ok"),
+    )
+    run_id = cur.lastrowid
+    insert_signals(
+        conn,
+        run_id,
+        [Signal(ticker=t, screener=s, score=9, analysis="ok") for (t, s) in tickers],
+    )
+    conn.commit()
+    return run_id
+
+
+def test_ticker_history_first_seen_and_streak(db):
+    # day 1: A, B
+    # day 2: A, B
+    # day 3: A         (B drops out — its streak ends)
+    # day 4: A, B      (B comes back — streak resets to 1 for B)
+    _seed_run_on_date(db, "2026-05-10", [("A", "s"), ("B", "s")])
+    _seed_run_on_date(db, "2026-05-11", [("A", "s"), ("B", "s")])
+    _seed_run_on_date(db, "2026-05-12", [("A", "s")])
+    run4 = _seed_run_on_date(db, "2026-05-13", [("A", "s"), ("B", "s")])
+
+    hist = get_ticker_history(db, run4)
+    assert hist["A"] == {"first_seen": "2026-05-10", "streak": 4}
+    assert hist["B"] == {"first_seen": "2026-05-10", "streak": 1}
+
+
+def test_ticker_history_streak_counts_distinct_scan_days_not_runs(db):
+    # 3 runs on the same calendar day — streak should be 1 (1 distinct scan-day).
+    _seed_run_on_date(db, "2026-05-12", [("A", "s")])
+    _seed_run_on_date(db, "2026-05-12", [("A", "s")])
+    run3 = _seed_run_on_date(db, "2026-05-12", [("A", "s")])
+
+    hist = get_ticker_history(db, run3)
+    assert hist["A"]["streak"] == 1
+
+
+def test_ticker_history_streak_ignores_weekend_gaps(db):
+    # A appears Fri + Mon. No runs on Sat/Sun. Streak = 2 because the streak
+    # is over *distinct scan-days*, which naturally skips days with no scans.
+    _seed_run_on_date(db, "2026-05-08", [("A", "s")])  # Fri
+    run = _seed_run_on_date(db, "2026-05-11", [("A", "s")])  # Mon
+
+    hist = get_ticker_history(db, run)
+    assert hist["A"]["streak"] == 2
+
+
+def test_ticker_history_empty_run(db):
+    run_id = insert_run(db)
+    mark_run_finished(db, run_id, "ok")
+    assert get_ticker_history(db, run_id) == {}
+
+
+def test_ticker_history_first_seen_is_first_appearance(db):
+    _seed_run_on_date(db, "2026-05-10", [("A", "s")])
+    _seed_run_on_date(db, "2026-05-11", [])  # nothing this day
+    run = _seed_run_on_date(db, "2026-05-12", [("A", "s")])
+
+    hist = get_ticker_history(db, run)
+    assert hist["A"]["first_seen"] == "2026-05-10"
+    # streak=2 because A appeared on 2 of the 3 distinct scan-days,
+    # but only 1 consecutive trailing day (run on 5-11 had no A signal).
+    # Actually: scan-days are 5-10, 5-11, 5-12. A appeared on 5-10 and 5-12.
+    # Walking desc from 5-12: hit, miss → streak = 1.
+    assert hist["A"]["streak"] == 1

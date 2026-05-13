@@ -130,6 +130,22 @@ def test_export_idempotent(db, tmp_path):
     assert len(runs) == 1
 
 
+def test_export_includes_ticker_history(db, tmp_path):
+    """latest.json signals should carry first_seen + streak when available."""
+    _seed_run(db, ["AAPL"])  # run 1
+    _seed_run(db, ["AAPL"])  # run 2 (same calendar day in test)
+
+    export(db, tmp_path)
+
+    latest = json.loads((tmp_path / "latest.json").read_text())
+    aapl = next(s for s in latest["signals"] if s["ticker"] == "AAPL")
+    assert "first_seen" in aapl
+    assert "streak" in aapl
+    assert aapl["first_seen"] is not None
+    assert aapl["streak"] is not None
+    assert aapl["streak"] >= 1
+
+
 def test_export_includes_market_data(db, tmp_path):
     run_id = insert_run(db)
     insert_signals(

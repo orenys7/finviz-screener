@@ -49,6 +49,8 @@ class SignalRow(BaseModel):
     price: float | None = None
     change_pct: float | None = None
     volume: int | None = None
+    first_seen: str | None = None
+    streak: int | None = None
 
 
 class RunSummary(BaseModel):

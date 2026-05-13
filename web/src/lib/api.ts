@@ -7,6 +7,8 @@ export interface SignalRow {
   price: number | null;
   change_pct: number | null;
   volume: number | null;
+  first_seen: string | null;
+  streak: number | null;
 }
 
 export interface RunSummary {

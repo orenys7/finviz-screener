@@ -151,6 +151,70 @@ def get_new_hit_counts(
     return {r["run_id"]: r["n"] for r in rows}
 
 
+def get_ticker_history(
+    conn: sqlite3.Connection, run_id: int
+) -> dict[str, dict[str, object]]:
+    """For each ticker in `run_id`, return {first_seen, streak} where:
+
+    - first_seen: ISO date (YYYY-MM-DD) of the first scan-day this ticker
+      appeared in any signals row.
+    - streak: number of consecutive scan-days ending at this run's date that
+      the ticker appeared on. Scan-days are *distinct dates on which any run
+      started*, so weekend/holiday gaps don't break the streak.
+    """
+    anchor = conn.execute(
+        "SELECT DATE(started_at) AS d FROM runs WHERE id = ?", (run_id,)
+    ).fetchone()
+    if anchor is None:
+        return {}
+    anchor_day = anchor["d"]
+
+    tickers = [
+        r["ticker"]
+        for r in conn.execute(
+            "SELECT DISTINCT ticker FROM signals WHERE run_id = ?", (run_id,)
+        )
+    ]
+    if not tickers:
+        return {}
+
+    all_days = [
+        r["d"]
+        for r in conn.execute(
+            "SELECT DISTINCT DATE(started_at) AS d FROM runs"
+            " WHERE status != 'running' AND DATE(started_at) <= ?"
+            " ORDER BY d DESC",
+            (anchor_day,),
+        )
+    ]
+
+    out: dict[str, dict[str, object]] = {}
+    for ticker in tickers:
+        days = {
+            r["d"]
+            for r in conn.execute(
+                "SELECT DISTINCT DATE(r.started_at) AS d"
+                " FROM signals s JOIN runs r ON r.id = s.run_id"
+                " WHERE s.ticker = ?"
+                "   AND r.status != 'running'"
+                "   AND DATE(r.started_at) <= ?",
+                (ticker, anchor_day),
+            )
+        }
+        if not days:
+            continue
+        first_seen = min(days)
+        streak = 0
+        for d in all_days:
+            if d in days:
+                streak += 1
+            else:
+                break
+        out[ticker] = {"first_seen": first_seen, "streak": streak}
+
+    return out
+
+
 def get_signals_for_run(conn: sqlite3.Connection, run_id: int) -> list[Signal]:
     rows = conn.execute(
         "SELECT ticker, screener, score, analysis, price, change_pct, volume "

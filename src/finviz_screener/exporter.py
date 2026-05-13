@@ -4,7 +4,12 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .db import get_finished_run_ids, get_run_by_id, get_signals_for_run
+from .db import (
+    get_finished_run_ids,
+    get_run_by_id,
+    get_signals_for_run,
+    get_ticker_history,
+)
 from .diff import find_new_hits
 from .models import Manifest, RunDetailResponse, RunSummary, SignalRow
 
@@ -24,6 +29,7 @@ def _build_run_detail(
     signals = get_signals_for_run(conn, run_id)
     new_hits = find_new_hits(conn, run_id, score_threshold, lookback_runs)
     new_tickers = {(h.ticker, h.screener) for h in new_hits}
+    history = get_ticker_history(conn, run_id)
 
     signal_rows = [
         SignalRow(
@@ -35,6 +41,8 @@ def _build_run_detail(
             price=s.price,
             change_pct=s.change_pct,
             volume=s.volume,
+            first_seen=history.get(s.ticker, {}).get("first_seen"),  # type: ignore[arg-type]
+            streak=history.get(s.ticker, {}).get("streak"),  # type: ignore[arg-type]
         )
         for s in signals
     ]
