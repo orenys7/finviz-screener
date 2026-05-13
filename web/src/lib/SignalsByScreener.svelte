@@ -23,13 +23,8 @@
     }
   }
 
-  function arrow(key: SortKey): string {
-    if (sortKey !== key) return "";
-    return sortAsc ? " ↑" : " ↓";
-  }
-
   function scoreColor(score: number): string {
-    if (score >= 8) return "#10b981"; // mint
+    if (score >= 8) return "#2fa084"; // secondary green
     if (score >= 6) return "#f59e0b"; // amber
     return "#ef4444"; // red
   }
@@ -38,12 +33,6 @@
     let h = 0;
     for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) % 360;
     return h;
-  }
-
-  function formatSince(iso: string | null): string {
-    if (!iso) return "";
-    // iso is "YYYY-MM-DD" — render compactly
-    return iso;
   }
 
   function groupAndSort(
@@ -88,12 +77,12 @@
       <table>
         <thead>
           <tr>
-            <th on:click={() => sort("ticker")}>Ticker{arrow("ticker")}</th>
-            <th on:click={() => sort("score")} class="num">Pro Score{arrow("score")}</th>
-            <th on:click={() => sort("price")} class="num">Price{arrow("price")}</th>
-            <th on:click={() => sort("change_pct")} class="num">% Change{arrow("change_pct")}</th>
-            <th on:click={() => sort("volume")} class="num">Volume{arrow("volume")}</th>
-            <th on:click={() => sort("streak")} class="num">Streak{arrow("streak")}</th>
+            <th on:click={() => sort("ticker")}>Ticker{sortKey === "ticker" ? (sortAsc ? " ↑" : " ↓") : ""}</th>
+            <th on:click={() => sort("score")} class="num">Pro Score{sortKey === "score" ? (sortAsc ? " ↑" : " ↓") : ""}</th>
+            <th on:click={() => sort("price")} class="num">Price{sortKey === "price" ? (sortAsc ? " ↑" : " ↓") : ""}</th>
+            <th on:click={() => sort("change_pct")} class="num">% Change{sortKey === "change_pct" ? (sortAsc ? " ↑" : " ↓") : ""}</th>
+            <th on:click={() => sort("volume")} class="num">Volume{sortKey === "volume" ? (sortAsc ? " ↑" : " ↓") : ""}</th>
+            <th on:click={() => sort("streak")} class="num">Streak{sortKey === "streak" ? (sortAsc ? " ↑" : " ↓") : ""}</th>
             <th class="static">Status</th>
             <th class="static">Analysis</th>
           </tr>
@@ -108,9 +97,6 @@
                   </span>
                   <span class="ticker-text">
                     <span class="ticker-sym">{s.ticker}</span>
-                    {#if s.first_seen}
-                      <span class="ticker-since">since {formatSince(s.first_seen)}</span>
-                    {/if}
                   </span>
                 </a>
               </td>
@@ -156,8 +142,8 @@
   .group {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 1.25rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
     overflow: hidden;
   }
 
@@ -165,15 +151,13 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--border-soft);
+    padding: 1.2rem 1.5rem;
+    border-bottom: 1px solid var(--border);
     background: var(--surface);
   }
 
   .group-header h2 {
     font-size: 15px;
-    font-weight: 600;
-    color: var(--text);
   }
 
   .group-count {
@@ -220,22 +204,10 @@
     color: var(--text-muted);
   }
 
-  .ticker-text {
-    display: inline-flex;
-    flex-direction: column;
-    line-height: 1.25;
-  }
-
   .ticker-sym {
     font-weight: 600;
     font-size: 13px;
     transition: color 0.15s;
-  }
-
-  .ticker-since {
-    color: var(--text-faint);
-    font-size: 11px;
-    font-weight: 400;
   }
 
   .score-cell {

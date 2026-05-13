@@ -60,12 +60,13 @@
 
 <style>
   .page-head {
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
   }
   .subtitle {
+    font-family: var(--font-sans);
     color: var(--text-muted);
     font-size: 14px;
-    margin-top: 0.35rem;
+    margin-top: 0.5rem;
   }
   .subtitle :global(strong) {
     color: var(--text);
@@ -74,7 +75,7 @@
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 6px;
     overflow: hidden;
   }
   :global(table th.num),

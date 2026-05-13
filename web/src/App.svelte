@@ -14,7 +14,7 @@
 <header>
   <nav>
     <a href="/" use:link class="brand">
-      <span class="brand-mark">▲</span> FinvizScan
+      <span class="brand-mark">◆</span> FinvizScan
     </a>
     <div class="nav-links">
       <a href="/" use:link>Latest</a>
@@ -32,22 +32,31 @@
 
 <style>
   :global(:root) {
-    --bg: #f8fafc;
+    /* Emerald Minimalist palette */
+    --primary: #1f6f5f;
+    --secondary: #2fa084;
+    --accent: #6fcf97;
+    --bg: #eeeeee;
     --surface: #ffffff;
-    --border: #e5e7eb;
-    --border-soft: #f1f5f9;
-    --text: #0f172a;
-    --text-muted: #64748b;
-    --text-faint: #94a3b8;
-    --primary: #10b981;
-    --primary-soft: #d1fae5;
-    --primary-softer: #ecfdf5;
+    --border: #d1d1d1;
+    --border-soft: #e5e5e5;
+
+    /* Semantic aliases */
+    --primary-soft: #d3ece5;
+    --primary-softer: #eaf5f1;
     --danger: #ef4444;
     --danger-soft: #fee2e2;
     --warn: #f59e0b;
     --warn-soft: #fef3c7;
-    --info: #6366f1;
-    --info-soft: #e0e7ff;
+
+    /* Text */
+    --text: #1a1a1a;
+    --text-muted: #6b7280;
+    --text-faint: #9ca3af;
+
+    /* Typography */
+    --font-serif: "Lora", "Calluna", Georgia, serif;
+    --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   }
 
   :global(*) {
@@ -57,8 +66,7 @@
   }
 
   :global(body) {
-    font-family:
-      "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--font-sans);
     background: var(--bg);
     color: var(--text);
     font-size: 14px;
@@ -72,16 +80,17 @@
   }
 
   :global(h1) {
+    font-family: var(--font-serif);
     font-size: 24px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--text);
+    font-weight: 600;
+    color: var(--primary);
   }
 
   :global(h2) {
+    font-family: var(--font-serif);
     font-size: 14px;
     font-weight: 600;
-    color: var(--text);
+    color: var(--primary);
   }
 
   :global(table) {
@@ -92,7 +101,7 @@
 
   :global(thead th) {
     text-align: left;
-    padding: 0.6rem 0.9rem;
+    padding: 0.72rem 1.08rem;
     background: transparent;
     color: var(--text-muted);
     font-weight: 500;
@@ -108,7 +117,7 @@
   }
 
   :global(tbody td) {
-    padding: 0.85rem 0.9rem;
+    padding: 1.02rem 1.08rem;
     border-bottom: 1px solid var(--border-soft);
     vertical-align: middle;
   }
@@ -135,14 +144,14 @@
   :global(.pill) {
     display: inline-block;
     padding: 0.2rem 0.55rem;
-    border-radius: 999px;
+    border-radius: 4px;
     font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.03em;
   }
   :global(.pill-ok) {
     background: var(--primary-soft);
-    color: #047857;
+    color: var(--primary);
   }
   :global(.pill-partial) {
     background: var(--warn-soft);
@@ -153,12 +162,12 @@
     color: #b91c1c;
   }
   :global(.pill-new) {
-    background: var(--info-soft);
-    color: #3730a3;
+    background: var(--primary-soft);
+    color: var(--secondary);
   }
   :global(.pill-up) {
     background: var(--primary-soft);
-    color: #047857;
+    color: var(--primary);
   }
   :global(.pill-down) {
     background: var(--danger-soft);
@@ -172,15 +181,16 @@
   :global(.error) {
     color: #b91c1c;
     background: var(--danger-soft);
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
+    padding: 0.9rem 1.2rem;
+    border-radius: 6px;
+    border: 1px solid var(--danger);
     margin: 1rem 0;
   }
 
   :global(.loading),
   :global(.empty) {
     color: var(--text-muted);
-    padding: 2rem 0;
+    padding: 2.4rem 0;
     text-align: center;
   }
 
@@ -189,7 +199,7 @@
     gap: 1rem;
     align-items: center;
     flex-wrap: wrap;
-    padding: 0.5rem 0 1.25rem;
+    padding: 0.6rem 0 1.5rem;
     color: var(--text-muted);
     font-size: 13px;
   }
@@ -199,9 +209,9 @@
     font-weight: 600;
   }
 
-  /* Header */
+  /* Header — flat nav on bg */
   header {
-    background: var(--surface);
+    background: var(--bg);
     border-bottom: 1px solid var(--border);
   }
 
@@ -212,22 +222,23 @@
     align-items: center;
     gap: 2rem;
     height: 56px;
-    padding: 0 1.5rem;
+    padding: 0 1.8rem;
   }
 
   .brand {
-    font-weight: 700;
-    font-size: 16px;
-    color: var(--text);
-    letter-spacing: -0.01em;
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--primary);
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.5rem;
   }
 
   .brand-mark {
-    color: var(--primary);
-    font-size: 18px;
+    color: var(--secondary);
+    font-size: 16px;
+    font-style: normal;
   }
 
   .nav-links {
@@ -242,11 +253,12 @@
     font-size: 13px;
     padding: 0.25rem 0;
     border-bottom: 2px solid transparent;
-    transition: color 0.15s;
+    transition: color 0.15s, border-color 0.15s;
   }
 
   .nav-links a:hover {
-    color: var(--text);
+    color: var(--primary);
+    border-bottom-color: var(--accent);
   }
 
   .github-link {
@@ -261,6 +273,6 @@
   main {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 1.75rem 1.5rem 3rem;
+    padding: 2.1rem 1.8rem 3.6rem;
   }
 </style>
