@@ -2,8 +2,8 @@ name: Finviz Momentum Scan
 
 on:
   schedule:
-    # 13:00, 17:00, 21:00 UTC Mon–Fri  (roughly pre-open, mid-session, after-close ET)
-    - cron: '0 13,17,21 * * 1-5'
+    # 16:30 ILT (13:30 UTC) Mon–Fri
+    - cron: '30 13 * * 1-5'
   workflow_dispatch:
 
 # Prevent two runs from racing on state.db — queue, never cancel.
