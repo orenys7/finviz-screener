@@ -13,9 +13,16 @@
 
 <header>
   <nav>
-    <a href="/" use:link class="brand">Finviz Screener</a>
-    <a href="/" use:link>Latest</a>
-    <a href="/runs" use:link>All Runs</a>
+    <a href="/" use:link class="brand">
+      <span class="brand-mark">▲</span> FinvizScan
+    </a>
+    <div class="nav-links">
+      <a href="/" use:link>Latest</a>
+      <a href="/runs" use:link>All Runs</a>
+    </div>
+    <a class="github-link" href="https://github.com/orenys7/finviz-screener" target="_blank" rel="noopener">
+      GitHub →
+    </a>
   </nav>
 </header>
 
@@ -24,6 +31,25 @@
 </main>
 
 <style>
+  :global(:root) {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --border-soft: #f1f5f9;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --text-faint: #94a3b8;
+    --primary: #10b981;
+    --primary-soft: #d1fae5;
+    --primary-softer: #ecfdf5;
+    --danger: #ef4444;
+    --danger-soft: #fee2e2;
+    --warn: #f59e0b;
+    --warn-soft: #fef3c7;
+    --info: #6366f1;
+    --info-soft: #e0e7ff;
+  }
+
   :global(*) {
     box-sizing: border-box;
     margin: 0;
@@ -31,116 +57,131 @@
   }
 
   :global(body) {
-    font-family: system-ui, -apple-system, sans-serif;
-    background: #0f1117;
-    color: #e2e8f0;
+    font-family:
+      "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
     font-size: 14px;
     line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
   }
 
   :global(a) {
-    color: #63b3ed;
+    color: var(--text);
     text-decoration: none;
   }
 
-  :global(a:hover) {
-    text-decoration: underline;
+  :global(h1) {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  :global(h2) {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
   }
 
   :global(table) {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 1rem;
+    font-variant-numeric: tabular-nums;
   }
 
-  :global(th) {
+  :global(thead th) {
     text-align: left;
-    padding: 0.5rem 0.75rem;
-    background: #1a202c;
-    color: #a0aec0;
-    font-weight: 600;
+    padding: 0.6rem 0.9rem;
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 12px;
     cursor: pointer;
     user-select: none;
-    border-bottom: 1px solid #2d3748;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
   }
 
-  :global(th:hover) {
-    color: #e2e8f0;
+  :global(thead th:hover) {
+    color: var(--text);
   }
 
-  :global(td) {
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid #1a202c;
-    vertical-align: top;
+  :global(tbody td) {
+    padding: 0.85rem 0.9rem;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: middle;
   }
 
-  :global(tr.new-hit td) {
-    background: rgba(99, 179, 237, 0.06);
+  :global(tbody tr:last-child td) {
+    border-bottom: none;
+  }
+
+  :global(tbody tr:hover td) {
+    background: var(--primary-softer);
   }
 
   :global(tr.clickable) {
     cursor: pointer;
   }
 
-  :global(tr.clickable:hover td) {
-    background: #1a202c;
-  }
-
   :global(.analysis) {
-    max-width: 500px;
-    color: #a0aec0;
+    max-width: 460px;
+    color: var(--text-muted);
     font-size: 13px;
   }
 
-  :global(.score) {
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-
-  :global(.score-10),
-  :global(.score-9) {
-    color: #68d391;
-  }
-
-  :global(.score-8),
-  :global(.score-7) {
-    color: #f6e05e;
-  }
-
-  :global(.score-6),
-  :global(.score-5) {
-    color: #f6ad55;
-  }
-
-  :global(.score-4),
-  :global(.score-3),
-  :global(.score-2),
-  :global(.score-1) {
-    color: #fc8181;
-  }
-
-  :global(.status) {
+  /* Status pills */
+  :global(.pill) {
     display: inline-block;
-    padding: 0.1rem 0.4rem;
-    border-radius: 4px;
-    font-size: 12px;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 11px;
     font-weight: 600;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  :global(.pill-ok) {
+    background: var(--primary-soft);
+    color: #047857;
+  }
+  :global(.pill-partial) {
+    background: var(--warn-soft);
+    color: #b45309;
+  }
+  :global(.pill-failed) {
+    background: var(--danger-soft);
+    color: #b91c1c;
+  }
+  :global(.pill-new) {
+    background: var(--info-soft);
+    color: #3730a3;
+  }
+  :global(.pill-up) {
+    background: var(--primary-soft);
+    color: #047857;
+  }
+  :global(.pill-down) {
+    background: var(--danger-soft);
+    color: #b91c1c;
+  }
+  :global(.pill-neutral) {
+    background: var(--border-soft);
+    color: var(--text-muted);
   }
 
-  :global(.status-ok) {
-    background: #1c4532;
-    color: #68d391;
+  :global(.error) {
+    color: #b91c1c;
+    background: var(--danger-soft);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
   }
 
-  :global(.status-partial) {
-    background: #44371c;
-    color: #f6e05e;
-  }
-
-  :global(.status-failed) {
-    background: #3d1c1c;
-    color: #fc8181;
+  :global(.loading),
+  :global(.empty) {
+    color: var(--text-muted);
+    padding: 2rem 0;
+    text-align: center;
   }
 
   :global(.run-meta) {
@@ -148,45 +189,78 @@
     gap: 1rem;
     align-items: center;
     flex-wrap: wrap;
-    padding: 0.75rem 0;
-    color: #a0aec0;
+    padding: 0.5rem 0 1.25rem;
+    color: var(--text-muted);
     font-size: 13px;
   }
 
-  :global(.error) {
-    color: #fc8181;
-    padding: 1rem 0;
+  :global(.run-meta strong) {
+    color: var(--text);
+    font-weight: 600;
   }
 
-  :global(.loading),
-  :global(.empty) {
-    color: #a0aec0;
-    padding: 1rem 0;
-  }
-
+  /* Header */
   header {
-    background: #1a202c;
-    border-bottom: 1px solid #2d3748;
-    padding: 0 1.5rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
   }
 
   nav {
+    max-width: 1200px;
+    margin: 0 auto;
     display: flex;
     align-items: center;
-    gap: 1.5rem;
-    height: 48px;
+    gap: 2rem;
+    height: 56px;
+    padding: 0 1.5rem;
   }
 
   .brand {
     font-weight: 700;
     font-size: 16px;
-    color: #e2e8f0;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .brand-mark {
+    color: var(--primary);
+    font-size: 18px;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 1.25rem;
     margin-right: auto;
+  }
+
+  .nav-links a {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 13px;
+    padding: 0.25rem 0;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s;
+  }
+
+  .nav-links a:hover {
+    color: var(--text);
+  }
+
+  .github-link {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .github-link:hover {
+    color: var(--primary);
   }
 
   main {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 1.5rem;
+    padding: 1.75rem 1.5rem 3rem;
   }
 </style>

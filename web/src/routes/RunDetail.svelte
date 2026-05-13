@@ -27,11 +27,17 @@
 {:else if !detail}
   <p class="loading">Loading…</p>
 {:else}
+  <div class="page-head">
+    <h1>Run #{detail.run.id}</h1>
+    <p class="subtitle">
+      <strong>{detail.run.n_signals}</strong> signal{detail.run.n_signals === 1 ? "" : "s"}
+      · <strong>{detail.run.n_new_hits}</strong> new
+    </p>
+  </div>
+
   <div class="run-meta">
-    <span>Run #{detail.run.id}</span>
-    <span class="status status-{detail.run.status}">{detail.run.status}</span>
+    <span class={`pill pill-${detail.run.status}`}>{detail.run.status}</span>
     <span>{new Date(detail.run.started_at).toLocaleString()}</span>
-    <span>{detail.run.n_signals} signals · {detail.run.n_new_hits} new</span>
   </div>
 
   {#if detail.signals.length === 0}
@@ -40,3 +46,18 @@
     <SignalsByScreener signals={detail.signals} />
   {/if}
 {/if}
+
+<style>
+  .page-head {
+    margin-bottom: 1rem;
+  }
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-top: 0.35rem;
+  }
+  .subtitle :global(strong) {
+    color: var(--text);
+    font-weight: 600;
+  }
+</style>
